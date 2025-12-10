@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Header, HTTPException, status
+from fastapi import FastAPI, Header, HTTPException, status, Depends
 from pydantic import BaseModel, Field
 from typing import List, Optional
 from datetime import datetime
@@ -95,17 +95,49 @@ class CreateRecordResponse(BaseModel):
     record: BusinessRecord
 
 # Authentication dependency
-def verify_api_key(x_api_key: str = Header(..., description="API Key for authentication")):
+def verify_api_key(
+    x_api_key: Optional[str] = Header(None, alias="X-API-Key"),
+    authorization: Optional[str] = Header(None)
+):
     """
-    Verify the API key provided in the X-API-Key header.
-    ServiceNow consultants should configure this in their REST Message.
+    Verify the API key provided in either:
+    1. X-API-Key header, OR
+    2. Authorization: Bearer <token> header
+
+    ServiceNow consultants can use either authentication method.
     """
-    if x_api_key not in VALID_API_KEYS:
+    api_key = None
+
+    # Check X-API-Key header first
+    if x_api_key:
+        api_key = x_api_key
+    # If not found, check Authorization Bearer token
+    elif authorization:
+        # Parse "Bearer <token>" format
+        parts = authorization.split()
+        if len(parts) == 2 and parts[0].lower() == "bearer":
+            api_key = parts[1]
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid Authorization header format. Use 'Bearer <token>'"
+            )
+
+    # If no authentication provided
+    if not api_key:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid API Key. Please check your X-API-Key header."
+            detail="Authentication required. Provide either X-API-Key header or Authorization: Bearer <token>"
         )
-    return VALID_API_KEYS[x_api_key]
+
+    # Validate the API key
+    if api_key not in VALID_API_KEYS:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid API Key or Bearer token."
+        )
+
+    return VALID_API_KEYS[api_key]
 
 @app.get("/")
 def root():
@@ -118,36 +150,36 @@ def root():
             "GET /records/{record_id}": "Retrieve a specific record by ID",
             "POST /records": "Create a new business record"
         },
-        "authentication": "Include X-API-Key header with your requests",
+        "authentication": "Include X-API-Key header OR Authorization: Bearer <token>",
         "valid_api_keys": list(VALID_API_KEYS.keys())
     }
 
 @app.get("/records", response_model=List[BusinessRecord])
-def get_records(user: str = Header(..., alias="X-API-Key", description="API Key", include_in_schema=False)):
+def get_records(user: str = Depends(verify_api_key)):
     """
     GET endpoint that returns an array of business records.
 
-    **Authentication Required**: Include X-API-Key header
+    **Authentication Required**: Use one of these methods:
+    - X-API-Key header: `X-API-Key: training-key-001`
+    - Authorization Bearer: `Authorization: Bearer training-key-001`
 
     **Example for ServiceNow REST Message:**
     - Endpoint: GET {endpoint}/records
     - HTTP Headers: X-API-Key: training-key-001
+      OR Authorization: Bearer training-key-001
     """
-    verify_api_key(user)
     return mock_records
 
 @app.get("/records/{record_id}", response_model=BusinessRecord)
 def get_record_by_id(
     record_id: str,
-    user: str = Header(..., alias="X-API-Key", description="API Key", include_in_schema=False)
+    user: str = Depends(verify_api_key)
 ):
     """
     GET endpoint to retrieve a specific record by ID.
 
-    **Authentication Required**: Include X-API-Key header
+    **Authentication Required**: Use X-API-Key header or Authorization: Bearer <token>
     """
-    verify_api_key(user)
-
     for record in mock_records:
         if record["id"] == record_id:
             return record
@@ -160,17 +192,17 @@ def get_record_by_id(
 @app.post("/records", response_model=CreateRecordResponse, status_code=status.HTTP_201_CREATED)
 def create_record(
     record: CreateRecordRequest,
-    user: str = Header(..., alias="X-API-Key", description="API Key", include_in_schema=False)
+    user: str = Depends(verify_api_key)
 ):
     """
     POST endpoint to create a new business record.
 
-    **Authentication Required**: Include X-API-Key header
+    **Authentication Required**: Use X-API-Key header or Authorization: Bearer <token>
 
     **Example for ServiceNow REST Message:**
     - Endpoint: POST {endpoint}/records
     - HTTP Headers:
-        - X-API-Key: training-key-001
+        - X-API-Key: training-key-001 (OR Authorization: Bearer training-key-001)
         - Content-Type: application/json
     - Request Body:
     ```json
@@ -183,7 +215,6 @@ def create_record(
     }
     ```
     """
-    verify_api_key(user)
 
     # Generate new ID
     new_id = f"REC{str(len(mock_records) + 1).zfill(3)}"

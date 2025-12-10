@@ -76,20 +76,30 @@ docker-compose up -d
 
 ## API Key Authentication
 
-All endpoints (except `/` and `/health`) require an API key in the request header.
+All endpoints (except `/` and `/health`) require authentication. The API supports **two authentication methods**:
+
+### Method 1: X-API-Key Header
 
 **Header Name**: `X-API-Key`
+
+```bash
+curl -H "X-API-Key: training-key-001" http://localhost:8000/records
+```
+
+### Method 2: Authorization Bearer Token
+
+**Header Format**: `Authorization: Bearer <token>`
+
+```bash
+curl -H "Authorization: Bearer training-key-001" http://localhost:8000/records
+```
 
 **Valid API Keys for Training**:
 - `training-key-001`
 - `training-key-002`
 - `demo-api-key-123`
 
-### Example cURL Request
-
-```bash
-curl -H "X-API-Key: training-key-001" http://localhost:8000/records
-```
+Both authentication methods accept the same keys and can be used interchangeably.
 
 ## Available Endpoints
 
@@ -97,9 +107,13 @@ curl -H "X-API-Key: training-key-001" http://localhost:8000/records
 
 Returns an array of business records.
 
-**Headers**:
+**Authentication** (choose one):
 ```
 X-API-Key: training-key-001
+```
+OR
+```
+Authorization: Bearer training-key-001
 ```
 
 **Response** (200 OK):
@@ -122,9 +136,13 @@ X-API-Key: training-key-001
 
 Retrieve a specific record by ID.
 
-**Headers**:
+**Authentication** (choose one):
 ```
 X-API-Key: training-key-001
+```
+OR
+```
+Authorization: Bearer training-key-001
 ```
 
 **Example**: `GET /records/REC001`
@@ -147,9 +165,14 @@ X-API-Key: training-key-001
 
 Create a new business record.
 
-**Headers**:
+**Authentication** (choose one):
 ```
 X-API-Key: training-key-001
+Content-Type: application/json
+```
+OR
+```
+Authorization: Bearer training-key-001
 Content-Type: application/json
 ```
 
@@ -208,12 +231,23 @@ Health check endpoint (no authentication required).
 
 ### Step 2: Configure HTTP Headers
 
-In the REST Message form, add HTTP Headers:
+In the REST Message form, add HTTP Headers.
+
+**Option A: Using X-API-Key**
 
 | Name | Value |
 |------|-------|
 | X-API-Key | training-key-001 |
 | Content-Type | application/json |
+
+**Option B: Using Bearer Token**
+
+| Name | Value |
+|------|-------|
+| Authorization | Bearer training-key-001 |
+| Content-Type | application/json |
+
+Choose either Option A or Option B (both work identically).
 
 ### Step 3: Create GET Method
 
@@ -303,12 +337,17 @@ try {
 
 ### Using cURL
 
-**GET Request**:
+**GET Request with X-API-Key**:
 ```bash
 curl -H "X-API-Key: training-key-001" http://localhost:8000/records
 ```
 
-**POST Request**:
+**GET Request with Bearer Token**:
+```bash
+curl -H "Authorization: Bearer training-key-001" http://localhost:8000/records
+```
+
+**POST Request with X-API-Key**:
 ```bash
 curl -X POST http://localhost:8000/records \
   -H "X-API-Key: training-key-001" \
@@ -322,8 +361,23 @@ curl -X POST http://localhost:8000/records \
   }'
 ```
 
+**POST Request with Bearer Token**:
+```bash
+curl -X POST http://localhost:8000/records \
+  -H "Authorization: Bearer training-key-001" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Test Record",
+    "category": "Testing",
+    "value": 500.00,
+    "owner": "Test User",
+    "description": "Testing POST endpoint"
+  }'
+```
+
 ### Using Python
 
+**Example 1: Using X-API-Key Header**
 ```python
 import requests
 
@@ -342,6 +396,35 @@ new_record = {
     "value": 750.00,
     "owner": "API Tester",
     "description": "Created via Python"
+}
+
+response = requests.post(
+    "http://localhost:8000/records",
+    headers=headers,
+    json=new_record
+)
+print(response.json())
+```
+
+**Example 2: Using Bearer Token**
+```python
+import requests
+
+headers = {
+    "Authorization": "Bearer training-key-001"
+}
+
+# GET request
+response = requests.get("http://localhost:8000/records", headers=headers)
+print(response.json())
+
+# POST request
+new_record = {
+    "name": "Python Bearer Test",
+    "category": "API Testing",
+    "value": 850.00,
+    "owner": "API Tester",
+    "description": "Created via Python with Bearer token"
 }
 
 response = requests.post(

@@ -105,6 +105,48 @@ def test_invalid_api_key():
     print_response("9. GET /records with Invalid API Key (Should Fail)", response)
     return response.status_code == 401
 
+def test_bearer_token_auth():
+    """Test GET /records with Bearer token authentication"""
+    headers = {"Authorization": f"Bearer {API_KEY}"}
+    response = requests.get(f"{BASE_URL}/records", headers=headers)
+    print_response("10. GET /records with Bearer Token", response)
+    return response.status_code == 200
+
+def test_bearer_token_post():
+    """Test POST /records with Bearer token authentication"""
+    headers = {
+        "Authorization": f"Bearer {API_KEY}",
+        "Content-Type": "application/json"
+    }
+    new_record = {
+        "name": "Bearer Token Test Record",
+        "category": "Authentication Testing",
+        "value": 777.77,
+        "owner": "Bearer Auth Test",
+        "description": "Testing Bearer token authentication"
+    }
+    response = requests.post(
+        f"{BASE_URL}/records",
+        headers=headers,
+        json=new_record
+    )
+    print_response("11. POST /records with Bearer Token", response)
+    return response.status_code == 201
+
+def test_invalid_bearer_token():
+    """Test with an invalid Bearer token"""
+    headers = {"Authorization": "Bearer invalid-token-xyz"}
+    response = requests.get(f"{BASE_URL}/records", headers=headers)
+    print_response("12. GET /records with Invalid Bearer Token (Should Fail)", response)
+    return response.status_code == 401
+
+def test_malformed_bearer_header():
+    """Test with malformed Authorization header"""
+    headers = {"Authorization": "InvalidFormat token-here"}
+    response = requests.get(f"{BASE_URL}/records", headers=headers)
+    print_response("13. GET /records with Malformed Auth Header (Should Fail)", response)
+    return response.status_code == 401
+
 def run_all_tests():
     """Run all tests and report results"""
     print("\n" + "="*60)
@@ -123,6 +165,10 @@ def run_all_tests():
         ("POST New Record", test_post_record),
         ("POST Invalid Data", test_post_invalid_record),
         ("Invalid API Key", test_invalid_api_key),
+        ("Bearer Token GET", test_bearer_token_auth),
+        ("Bearer Token POST", test_bearer_token_post),
+        ("Invalid Bearer Token", test_invalid_bearer_token),
+        ("Malformed Auth Header", test_malformed_bearer_header),
     ]
 
     results = []
