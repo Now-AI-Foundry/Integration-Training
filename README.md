@@ -2,6 +2,14 @@
 
 A practice API server for ServiceNow solution consultants to build and test custom REST integrations.
 
+## Production Server
+
+**Base URL**: `https://integration-training.sliplane.app`
+
+**Interactive Documentation**: https://integration-training.sliplane.app/docs
+
+This server is ready to use for ServiceNow integration training. No installation required!
+
 ## Overview
 
 This API provides realistic endpoints to practice:
@@ -28,7 +36,11 @@ The server will start at `http://localhost:8000`
 
 ### 3. Access API Documentation
 
-Open your browser to:
+**Production Server:**
+- **Interactive Docs**: https://integration-training.sliplane.app/docs
+- **Alternative Docs**: https://integration-training.sliplane.app/redoc
+
+**Local Development:**
 - **Interactive Docs**: http://localhost:8000/docs
 - **Alternative Docs**: http://localhost:8000/redoc
 
@@ -83,7 +95,7 @@ All endpoints (except `/` and `/health`) require authentication. The API support
 **Header Name**: `X-API-Key`
 
 ```bash
-curl -H "X-API-Key: training-key-001" http://localhost:8000/records
+curl -H "X-API-Key: training-key-001" https://integration-training.sliplane.app/records
 ```
 
 ### Method 2: Authorization Bearer Token
@@ -91,7 +103,7 @@ curl -H "X-API-Key: training-key-001" http://localhost:8000/records
 **Header Format**: `Authorization: Bearer <token>`
 
 ```bash
-curl -H "Authorization: Bearer training-key-001" http://localhost:8000/records
+curl -H "Authorization: Bearer training-key-001" https://integration-training.sliplane.app/records
 ```
 
 **Valid API Keys for Training**:
@@ -100,6 +112,13 @@ curl -H "Authorization: Bearer training-key-001" http://localhost:8000/records
 - `demo-api-key-123`
 
 Both authentication methods accept the same keys and can be used interchangeably.
+
+### Quick Test
+
+Try this in your browser or API client (no authentication required):
+```
+GET https://integration-training.sliplane.app/health
+```
 
 ## Available Endpoints
 
@@ -226,8 +245,10 @@ Health check endpoint (no authentication required).
 2. Click **New**
 3. Fill in:
    - **Name**: Training API Integration
-   - **Endpoint**: `http://localhost:8000`
+   - **Endpoint**: `https://integration-training.sliplane.app`
    - **Authentication**: None (we'll use custom headers)
+
+> **Note**: For local development, use `http://localhost:8000` as the endpoint instead.
 
 ### Step 2: Configure HTTP Headers
 
@@ -335,21 +356,23 @@ try {
 
 ## Testing Without ServiceNow
 
+All examples below use the production server. For local development, replace `https://integration-training.sliplane.app` with `http://localhost:8000`.
+
 ### Using cURL
 
 **GET Request with X-API-Key**:
 ```bash
-curl -H "X-API-Key: training-key-001" http://localhost:8000/records
+curl -H "X-API-Key: training-key-001" https://integration-training.sliplane.app/records
 ```
 
 **GET Request with Bearer Token**:
 ```bash
-curl -H "Authorization: Bearer training-key-001" http://localhost:8000/records
+curl -H "Authorization: Bearer training-key-001" https://integration-training.sliplane.app/records
 ```
 
 **POST Request with X-API-Key**:
 ```bash
-curl -X POST http://localhost:8000/records \
+curl -X POST https://integration-training.sliplane.app/records \
   -H "X-API-Key: training-key-001" \
   -H "Content-Type: application/json" \
   -d '{
@@ -363,7 +386,7 @@ curl -X POST http://localhost:8000/records \
 
 **POST Request with Bearer Token**:
 ```bash
-curl -X POST http://localhost:8000/records \
+curl -X POST https://integration-training.sliplane.app/records \
   -H "Authorization: Bearer training-key-001" \
   -H "Content-Type: application/json" \
   -d '{
@@ -381,12 +404,14 @@ curl -X POST http://localhost:8000/records \
 ```python
 import requests
 
+BASE_URL = "https://integration-training.sliplane.app"
+
 headers = {
     "X-API-Key": "training-key-001"
 }
 
 # GET request
-response = requests.get("http://localhost:8000/records", headers=headers)
+response = requests.get(f"{BASE_URL}/records", headers=headers)
 print(response.json())
 
 # POST request
@@ -399,7 +424,7 @@ new_record = {
 }
 
 response = requests.post(
-    "http://localhost:8000/records",
+    f"{BASE_URL}/records",
     headers=headers,
     json=new_record
 )
@@ -410,12 +435,14 @@ print(response.json())
 ```python
 import requests
 
+BASE_URL = "https://integration-training.sliplane.app"
+
 headers = {
     "Authorization": "Bearer training-key-001"
 }
 
 # GET request
-response = requests.get("http://localhost:8000/records", headers=headers)
+response = requests.get(f"{BASE_URL}/records", headers=headers)
 print(response.json())
 
 # POST request
@@ -428,7 +455,7 @@ new_record = {
 }
 
 response = requests.post(
-    "http://localhost:8000/records",
+    f"{BASE_URL}/records",
     headers=headers,
     json=new_record
 )
