@@ -7,7 +7,7 @@ import uvicorn
 app = FastAPI(
     title="ServiceNow Integration Training API",
     description="Practice API for ServiceNow solution consultants to build custom integrations",
-    version="1.0.0",
+    version="1.1.0",
     servers=[
         {
             "url": "https://integration-training.sliplane.app",
