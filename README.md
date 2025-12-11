@@ -224,7 +224,64 @@ Content-Type: application/json
 }
 ```
 
-### 4. GET /health
+### 4. GET /summary
+
+Retrieve summary statistics as a single JSON object (not an array).
+
+**Authentication** (choose one):
+```
+X-API-Key: training-key-001
+```
+OR
+```
+Authorization: Bearer training-key-001
+```
+
+**Response** (200 OK):
+```json
+{
+  "total_records": 5,
+  "total_value": 65500.0,
+  "average_value": 13100.0,
+  "status_breakdown": {
+    "Active": 2,
+    "Completed": 1,
+    "In Progress": 1,
+    "Pending": 1
+  },
+  "category_breakdown": {
+    "Software": 1,
+    "Services": 1,
+    "Compliance": 1,
+    "Training": 1,
+    "Hardware": 1
+  },
+  "most_valuable_record": {
+    "id": "REC005",
+    "name": "Office Equipment Upgrade",
+    "category": "Hardware",
+    "status": "Pending",
+    "value": 25000.0,
+    "created_date": "2024-05-12",
+    "owner": "Facilities",
+    "description": "Office workstation and equipment upgrade project"
+  },
+  "latest_record": {
+    "id": "REC005",
+    "name": "Office Equipment Upgrade",
+    "category": "Hardware",
+    "status": "Pending",
+    "value": 25000.0,
+    "created_date": "2024-05-12",
+    "owner": "Facilities",
+    "description": "Office workstation and equipment upgrade project"
+  }
+}
+```
+
+**Use Case**: Perfect for displaying dashboard metrics or summary statistics in ServiceNow. This endpoint demonstrates working with a single JSON object response rather than an array.
+
+### 5. GET /health
 
 Health check endpoint (no authentication required).
 
@@ -298,9 +355,19 @@ Choose either Option A or Option B (both work identically).
 ```
 4. **Test** the method
 
-### Step 5: Parse Response in Script
+### Step 5: Create Summary Method (Single Object Response)
 
-Use the REST Message in a script:
+1. Create another **HTTP Method**
+2. Configure:
+   - **Name**: Get Summary
+   - **HTTP method**: GET
+   - **Endpoint**: `${endpoint}/summary`
+3. **Test** the method
+4. **Note**: This endpoint returns a single JSON object, not an array
+
+### Step 6: Parse Response in Script
+
+**Example 1: Parsing Array Response (GET /records)**
 
 ```javascript
 try {
@@ -319,6 +386,41 @@ try {
             var record = records[i];
             gs.info('Record: ' + record.id + ' - ' + record.name);
         }
+    } else {
+        gs.error('HTTP Error: ' + httpStatus);
+    }
+} catch (ex) {
+    gs.error('Error calling API: ' + ex.message);
+}
+```
+
+**Example 2: Parsing Single Object Response (GET /summary)**
+
+```javascript
+try {
+    var r = new sn_ws.RESTMessageV2('Training API Integration', 'Get Summary');
+    var response = r.execute();
+    var httpStatus = response.getStatusCode();
+
+    if (httpStatus == 200) {
+        var responseBody = response.getBody();
+        var summary = JSON.parse(responseBody);  // Single object, not array
+
+        // Access direct properties
+        gs.info('Total Records: ' + summary.total_records);
+        gs.info('Total Value: $' + summary.total_value);
+        gs.info('Average Value: $' + summary.average_value);
+
+        // Access nested objects
+        gs.info('Status Breakdown:');
+        for (var status in summary.status_breakdown) {
+            gs.info('  ' + status + ': ' + summary.status_breakdown[status]);
+        }
+
+        // Access most valuable record
+        var mostValuable = summary.most_valuable_record;
+        gs.info('Most Valuable: ' + mostValuable.name + ' ($' + mostValuable.value + ')');
+
     } else {
         gs.error('HTTP Error: ' + httpStatus);
     }
@@ -353,6 +455,12 @@ try {
 - Create a Scheduled Job
 - Periodically fetch records from the API
 - Update a ServiceNow table with the latest data
+
+### Exercise 6: Dashboard Integration (Single Object Response)
+- Call the GET /summary endpoint
+- Parse the single JSON object (not an array)
+- Display the statistics on a ServiceNow dashboard or homepage widget
+- Practice accessing nested properties (status_breakdown, category_breakdown)
 
 ## Testing Without ServiceNow
 
@@ -396,6 +504,11 @@ curl -X POST https://integration-training.sliplane.app/records \
     "owner": "Test User",
     "description": "Testing POST endpoint"
   }'
+```
+
+**GET Summary Request (Single Object Response)**:
+```bash
+curl -H "X-API-Key: training-key-001" https://integration-training.sliplane.app/summary
 ```
 
 ### Using Python
@@ -460,6 +573,35 @@ response = requests.post(
     json=new_record
 )
 print(response.json())
+```
+
+**Example 3: Getting Summary Statistics (Single Object)**
+```python
+import requests
+
+BASE_URL = "https://integration-training.sliplane.app"
+
+headers = {
+    "X-API-Key": "training-key-001"
+}
+
+# Get summary as single object
+response = requests.get(f"{BASE_URL}/summary", headers=headers)
+summary = response.json()
+
+# Access the single object's properties
+print(f"Total Records: {summary['total_records']}")
+print(f"Total Value: ${summary['total_value']}")
+print(f"Average Value: ${summary['average_value']}")
+
+# Access nested objects
+print("\nStatus Breakdown:")
+for status, count in summary['status_breakdown'].items():
+    print(f"  {status}: {count}")
+
+print("\nMost Valuable Record:")
+most_valuable = summary['most_valuable_record']
+print(f"  {most_valuable['name']}: ${most_valuable['value']}")
 ```
 
 ## Common Issues & Solutions

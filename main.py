@@ -7,7 +7,7 @@ import uvicorn
 app = FastAPI(
     title="ServiceNow Integration Training API",
     description="Practice API for ServiceNow solution consultants to build custom integrations",
-    version="1.1.0",
+    version="1.2.0",
     servers=[
         {
             "url": "https://integration-training.sliplane.app",
@@ -104,6 +104,15 @@ class CreateRecordResponse(BaseModel):
     message: str
     record: BusinessRecord
 
+class SummaryResponse(BaseModel):
+    total_records: int
+    total_value: float
+    average_value: float
+    status_breakdown: dict
+    category_breakdown: dict
+    most_valuable_record: BusinessRecord
+    latest_record: BusinessRecord
+
 # Authentication dependency
 def verify_api_key(
     x_api_key: Optional[str] = Header(None, alias="X-API-Key"),
@@ -156,8 +165,9 @@ def root():
         "message": "Welcome to ServiceNow Integration Training API",
         "documentation": "/docs",
         "endpoints": {
-            "GET /records": "Retrieve all business records",
+            "GET /records": "Retrieve all business records (returns array)",
             "GET /records/{record_id}": "Retrieve a specific record by ID",
+            "GET /summary": "Retrieve summary statistics (returns single object)",
             "POST /records": "Create a new business record"
         },
         "authentication": "Include X-API-Key header OR Authorization: Bearer <token>",
@@ -248,6 +258,53 @@ def create_record(
         "success": True,
         "message": f"Record '{new_record['name']}' created successfully",
         "record": new_record
+    }
+
+@app.get("/summary", response_model=SummaryResponse)
+def get_summary(user: str = Depends(verify_api_key)):
+    """
+    GET endpoint that returns a single summary object with statistics.
+
+    **Authentication Required**: Use X-API-Key header or Authorization: Bearer <token>
+
+    **Example for ServiceNow REST Message:**
+    - Endpoint: GET {endpoint}/summary
+    - HTTP Headers: X-API-Key: training-key-001
+      OR Authorization: Bearer training-key-001
+
+    **Use Case**: Display dashboard metrics or summary statistics in ServiceNow
+    """
+    # Calculate statistics
+    total_records = len(mock_records)
+    total_value = sum(record["value"] for record in mock_records)
+    average_value = total_value / total_records if total_records > 0 else 0
+
+    # Status breakdown
+    status_breakdown = {}
+    for record in mock_records:
+        status = record["status"]
+        status_breakdown[status] = status_breakdown.get(status, 0) + 1
+
+    # Category breakdown
+    category_breakdown = {}
+    for record in mock_records:
+        category = record["category"]
+        category_breakdown[category] = category_breakdown.get(category, 0) + 1
+
+    # Most valuable record
+    most_valuable = max(mock_records, key=lambda x: x["value"]) if mock_records else None
+
+    # Latest record (by date, then by ID as tiebreaker)
+    latest = max(mock_records, key=lambda x: (x["created_date"], x["id"])) if mock_records else None
+
+    return {
+        "total_records": total_records,
+        "total_value": total_value,
+        "average_value": round(average_value, 2),
+        "status_breakdown": status_breakdown,
+        "category_breakdown": category_breakdown,
+        "most_valuable_record": most_valuable,
+        "latest_record": latest
     }
 
 @app.get("/health")

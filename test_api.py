@@ -147,6 +147,31 @@ def test_malformed_bearer_header():
     print_response("13. GET /records with Malformed Auth Header (Should Fail)", response)
     return response.status_code == 401
 
+def test_get_summary():
+    """Test GET /summary endpoint (single object response)"""
+    headers = {"X-API-Key": API_KEY}
+    response = requests.get(f"{BASE_URL}/summary", headers=headers)
+    print_response("14. GET /summary (Single Object Response)", response)
+
+    # Verify it's a single object, not an array
+    if response.status_code == 200:
+        data = response.json()
+        # Check that response is a dict (object) and not a list (array)
+        is_object = isinstance(data, dict) and not isinstance(data, list)
+        # Check expected keys exist
+        has_required_keys = all(key in data for key in [
+            "total_records", "total_value", "average_value",
+            "status_breakdown", "category_breakdown"
+        ])
+        return is_object and has_required_keys
+    return False
+
+def test_summary_without_auth():
+    """Test GET /summary without authentication (should fail)"""
+    response = requests.get(f"{BASE_URL}/summary")
+    print_response("15. GET /summary WITHOUT Auth (Should Fail)", response)
+    return response.status_code == 401
+
 def run_all_tests():
     """Run all tests and report results"""
     print("\n" + "="*60)
@@ -169,6 +194,8 @@ def run_all_tests():
         ("Bearer Token POST", test_bearer_token_post),
         ("Invalid Bearer Token", test_invalid_bearer_token),
         ("Malformed Auth Header", test_malformed_bearer_header),
+        ("GET Summary Object", test_get_summary),
+        ("Summary without Auth", test_summary_without_auth),
     ]
 
     results = []
